@@ -151,7 +151,32 @@ void clock_init(bool has_crystal, uint32_t dfll48m_fine_calibration) {
     // DFLL48M is enabled by default
     // TODO: handle fine calibration data.
 
-    init_clock_source_osculp32k(); //Dummie for the moment
+    #if _GCLK_INIT_1ST
+    _gclk_init_generators_by_fref(_GCLK_INIT_1ST);
+    #endif
+
+    _oscctrl_init_referenced_generators();
+    _gclk_init_generators_by_fref(0x0000001F);
+
+    #if (CONF_PORT_EVCTRL_PORT_0 | CONF_PORT_EVCTRL_PORT_1 | CONF_PORT_EVCTRL_PORT_2 | CONF_PORT_EVCTRL_PORT_3)
+    hri_port_set_EVCTRL_reg(PORT, 0, CONF_PORTA_EVCTRL);
+    hri_port_set_EVCTRL_reg(PORT, 1, CONF_PORTB_EVCTRL);
+    #endif
+
+    // Update SystemCoreClock since it is hard coded with asf4 and not correct
+    // Init 1ms tick timer (samd SystemCoreClock may not correct)
+    // SystemCoreClock = 16000000;
+    // SysTick_Config(16000000 / 1000);
+
+    // USB Stuff
+    /* USB Clock init
+    * The USB module requires a GCLK_USB of 48 MHz ~ 0.25% clock
+    * for low speed and full speed operation. */
+    hri_gclk_write_PCHCTRL_reg(GCLK, USB_GCLK_ID, GCLK_PCHCTRL_GEN_GCLK1_Val | GCLK_PCHCTRL_CHEN);
+    hri_mclk_set_AHBMASK_USB_bit(MCLK);
+    hri_mclk_set_APBBMASK_USB_bit(MCLK);
+
+    /*init_clock_source_osculp32k(); //Dummie for the moment
 
     if (has_crystal) {
         init_clock_source_xosc32k();
@@ -172,13 +197,14 @@ void clock_init(bool has_crystal, uint32_t dfll48m_fine_calibration) {
     enable_clock_generator(1, GCLK_GENCTRL_SRC_DFLL48M_Val, 1);
     enable_clock_generator(3, GCLK_GENCTRL_SRC_OSC32K_Val, 1);//??
     
-    /*if (has_crystal) {
+
+    if (has_crystal) {
         enable_clock_generator(2, GCLK_GENCTRL_SRC_XOSC32K_Val, 1);
-    } else {*/
+    } else {
         enable_clock_generator(2, GCLK_GENCTRL_SRC_OSC32K_Val, 1);
-    //}
-    
-    /* Change OSC48M divider to /1. CPU will run at 48MHz */
+    }
+    */
+    // Change OSC48M divider to /1. CPU will run at 48MHz
   //OSCCTRL->OSC48MDIV.reg = OSCCTRL_OSC48MDIV_DIV(0);
   //while ( OSCCTRL->OSC48MSYNCBUSY.reg & OSCCTRL_OSC48MSYNCBUSY_OSC48MDIV );
 
